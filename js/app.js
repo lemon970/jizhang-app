@@ -3,7 +3,7 @@ import { parseAlipayCsv } from './parse-alipay.js';
 import { readWechatFile, parseWechatRows } from './parse-wechat.js';
 import { normalizeAlipay, normalizeWechat } from './normalize.js';
 import { mergeTransactions } from './dedup.js';
-import { classify, CATEGORIES } from './classify.js';
+import { classify, resolveCategory, CATEGORIES } from './classify.js';
 import { summarize, prevMonthRange, matchesSearch, groupByCounterparty } from './aggregate.js';
 import { renderCategoryPie, renderTrend, colorForCategory } from './charts.js';
 import { iconSvg } from './icons.js';
@@ -40,7 +40,7 @@ async function fileToTransactions(file) {
 }
 
 function classifyAll() {
-  for (const t of transactions) t.myCategory = classify(t, memory);
+  for (const t of transactions) t.myCategory = resolveCategory(t, memory);
 }
 
 // ===== 标签切换 =====
@@ -84,14 +84,34 @@ function filteredTransactions() {
   const cat = document.getElementById('filterCategory').value;
   const onlyUncat = document.getElementById('onlyUncat').checked;
   const query = document.getElementById('searchInput').value;
+  // 跟随概览当前时间范围：从某月下钻进来时，只看该月（range 为"全部"时不限时间）
+  const inRange = t => {
+    const d = t.datetime.slice(0, 10);
+    return (!range.start || d >= range.start) && (!range.end || d <= range.end);
+  };
   return transactions.filter(t =>
+    inRange(t) &&
     (!src || t.source === src) &&
     (!cat || t.myCategory === cat) &&
     (!onlyUncat || t.myCategory === '其他') &&
     matchesSearch(t, query));
 }
 
+// 明细页顶部的时间范围标记：透明告知"正在只看某月"，并可一键看全部
+function updateDetailTimeChip() {
+  const chip = document.getElementById('detailTimeChip');
+  if (!chip) return;
+  if (range.start) {
+    chip.hidden = false;
+    chip.innerHTML = `仅看 ${range.label} <span class="x" aria-hidden="true">✕</span>`;
+    chip.setAttribute('aria-label', `当前只显示 ${range.label} 的账单，点击查看全部时间`);
+  } else {
+    chip.hidden = true;
+  }
+}
+
 function renderDetail() {
+  updateDetailTimeChip();
   const rows = filteredTransactions().sort((a, b) => b.datetime.localeCompare(a.datetime));
   document.getElementById('detailCount').textContent = `${rows.length} 条`;
   document.getElementById('listView').hidden = detailMode !== 'list';
@@ -161,12 +181,19 @@ async function onChangeCategory(e) {
   const id = e.target.dataset.id, cat = e.target.value;
   const t = transactions.find(x => x.id === id);
   if (!t) return;
-  memory[t.counterparty] = cat;
-  await saveMemory(t.counterparty, cat);
-  // 同商户的所有记录一并更新
+  const cp = t.counterparty;
+  const realMerchant = cp && cp !== '/';   // 真实商户名才适合做"记忆"与批量联动
   const touched = [];
-  for (const o of transactions)
-    if (o.counterparty === t.counterparty) { o.myCategory = cat; touched.push(o); }
+  if (realMerchant) {
+    // 真实商户：记住该商户，同商户记录全部联动
+    memory[cp] = cat;
+    await saveMemory(cp, cat);
+    for (const o of transactions)
+      if (o.counterparty === cp) { o.myCategory = cat; o.manual = true; touched.push(o); }
+  } else {
+    // 无对方(如转账/退款/"/")：只改这一笔，不波及其他同样无对方的交易
+    t.myCategory = cat; t.manual = true; touched.push(t);
+  }
   await saveTransactions(touched);
   refreshAll();
 }
@@ -181,6 +208,11 @@ function populateCategoryFilter() {
 ['filterSource', 'filterCategory', 'onlyUncat'].forEach(id =>
   document.getElementById(id).addEventListener('change', renderDetail));
 document.getElementById('searchInput').addEventListener('input', renderDetail);
+document.getElementById('detailTimeChip').addEventListener('click', () => {
+  // 一键解除时间限制：看全部时间（与概览"全部"一致）
+  range = { start: null, end: null, label: '全部' };
+  refreshAll();
+});
 document.getElementById('viewToggle').addEventListener('click', e => {
   const btn = e.target.closest('.seg');
   if (!btn) return;

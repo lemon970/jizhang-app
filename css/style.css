@@ -180,6 +180,19 @@ main { max-width: 760px; margin: 0 auto; padding: var(--sp-lg); }
   padding: var(--sp-xs) var(--sp-md); border-radius: var(--r-pill);
 }
 
+/* ===== 时间范围标记（下钻时只看某月，可一键清除）===== */
+.time-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  margin-bottom: var(--sp-md);
+  background: var(--ink); color: var(--primary);
+  border: none; cursor: pointer; font-family: inherit;
+  font-size: 13px; font-weight: 600;
+  padding: var(--sp-xs) var(--sp-md); border-radius: var(--r-pill);
+  transition: opacity .15s;
+}
+.time-chip:hover { opacity: .85; }
+.time-chip .x { font-size: 12px; opacity: .7; }
+
 /* ===== 列表/商户 视图切换 ===== */
 .seg-toggle { display: flex; background: var(--canvas-soft); border-radius: var(--r-md);
   padding: 3px; margin-bottom: var(--sp-md); gap: 3px; }

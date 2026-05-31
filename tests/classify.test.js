@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
-const { classify, CATEGORIES } = await import('../js/classify.js');
+const { classify, resolveCategory, CATEGORIES } = await import('../js/classify.js');
 
 const base = { counterparty:'', description:'', rawCategory:'', source:'支付宝', direction:'支出' };
 
@@ -37,4 +37,26 @@ test('CATEGORIES 含学生版分类，且已无"人情往来"', () => {
   assert.ok(CATEGORIES.includes('学习教育'));
   assert.ok(CATEGORIES.includes('转账'));
   assert.ok(!CATEGORIES.includes('人情往来'));
+});
+
+test('塔斯汀等快餐命中餐饮', () => {
+  assert.strictEqual(classify({ ...base, source:'微信', counterparty:'塔斯汀', rawCategory:'商户消费' }, {}), '餐饮');
+  assert.strictEqual(classify({ ...base, source:'微信', counterparty:'肯德基', rawCategory:'商户消费' }, {}), '餐饮');
+});
+
+test('resolveCategory: 手动分类绝对优先，永不被规则覆盖', () => {
+  // 塔斯汀按规则=餐饮，但用户手动标了医疗健康，必须保留医疗健康
+  const t = { ...base, source:'微信', counterparty:'塔斯汀', myCategory:'医疗健康', manual:true };
+  assert.strictEqual(resolveCategory(t, {}), '医疗健康');
+});
+
+test('resolveCategory: 空商户名的手动分类也能保住（修复记忆失效）', () => {
+  // 对方为"/"无法走商户记忆，但 manual 标记仍保证手动分类不丢
+  const t = { ...base, source:'微信', counterparty:'/', description:'/', myCategory:'转账', manual:true };
+  assert.strictEqual(resolveCategory(t, {}), '转账');
+});
+
+test('resolveCategory: 未手动标记时回退到规则', () => {
+  const t = { ...base, source:'微信', counterparty:'塔斯汀', rawCategory:'商户消费' };
+  assert.strictEqual(resolveCategory(t, {}), '餐饮');
 });
