@@ -68,8 +68,12 @@ main { max-width: 760px; margin: 0 auto; padding: var(--sp-lg); }
 .card {
   background: var(--canvas); border-radius: var(--r-xl);
   padding: var(--sp-xl); margin-bottom: var(--sp-lg);
+  box-shadow: 0 1px 2px rgba(14,15,12,.04), 0 4px 16px rgba(14,15,12,.05);
 }
 .card-title { font-size: 16px; font-weight: 700; margin-bottom: var(--sp-lg); }
+.card-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: var(--sp-lg); }
+.card-head .card-title { margin-bottom: 0; }
+.card-meta { font-size: 12px; color: var(--mute); font-weight: 600; }
 .card-desc { font-size: 14px; color: var(--body); margin-bottom: var(--sp-lg); }
 .card-desc b { color: var(--ink); }
 
@@ -93,16 +97,63 @@ main { max-width: 760px; margin: 0 auto; padding: var(--sp-lg); }
 .kpi-card {
   border-radius: var(--r-lg); padding: var(--sp-lg);
   display: flex; flex-direction: column; gap: var(--sp-xs);
+  box-shadow: 0 1px 2px rgba(14,15,12,.04), 0 4px 16px rgba(14,15,12,.05);
 }
 .kpi-expense { background: var(--ink); color: var(--primary); }
 .kpi-income { background: var(--primary-pale); color: var(--ink-deep); }
 .kpi-net { background: var(--canvas); color: var(--ink); border: 1px solid var(--canvas-soft); }
 .kpi-label { font-size: 12px; opacity: .8; }
 .kpi-value { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; font-variant-numeric: tabular-nums; }
+.kpi-delta, .kpi-sub { font-size: 11px; opacity: .85; min-height: 14px; }
+.kpi-delta.up { color: var(--negative); opacity: 1; }       /* 支出涨=红 */
+.kpi-delta.down { color: var(--positive); opacity: 1; }     /* 支出降=绿 */
+.kpi-expense .kpi-delta.up { color: #ff9b9b; }
+.kpi-expense .kpi-delta.down { color: var(--primary); }
 
 /* ===== 图表 ===== */
 .chart-wrap { position: relative; height: 260px; }
 .empty-hint { font-size: 14px; color: var(--mute); text-align: center; padding: var(--sp-2xl) 0; }
+
+/* 饼图 + 中心总额叠层 */
+.pie-wrap { position: relative; }
+.chart-pie { height: 240px; }
+.pie-center {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; pointer-events: none; gap: 2px;
+}
+.pie-center-label { font-size: 12px; color: var(--mute); }
+.pie-center-value { font-size: 20px; font-weight: 800; color: var(--ink); letter-spacing: -0.5px; font-variant-numeric: tabular-nums; }
+
+/* ===== 分类明细列表 ===== */
+.cat-list { list-style: none; margin-top: var(--sp-md); }
+.cat-item {
+  display: flex; align-items: center; gap: var(--sp-md);
+  padding: var(--sp-md) var(--sp-sm); border-radius: var(--r-md);
+  cursor: pointer; transition: background .18s;
+}
+.cat-item:hover { background: var(--canvas-soft); }
+.cat-item:focus-visible { outline: 2px solid var(--positive); outline-offset: 1px; }
+.cat-icon { flex: none; width: 36px; height: 36px; border-radius: var(--r-pill);
+  display: flex; align-items: center; justify-content: center;
+  background: var(--canvas-soft); }
+.cat-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+.cat-row1 { display: flex; justify-content: space-between; align-items: baseline; gap: var(--sp-sm); }
+.cat-name { font-size: 14px; font-weight: 600; }
+.cat-amt { font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.cat-bar { height: 6px; background: var(--canvas-soft); border-radius: var(--r-pill); overflow: hidden; }
+.cat-bar-fill { display: block; height: 100%; border-radius: var(--r-pill); transition: width .4s ease; }
+.cat-pct { flex: none; width: 36px; text-align: right; font-size: 12px; color: var(--mute); font-variant-numeric: tabular-nums; }
+.cat-arrow { flex: none; color: var(--mute); font-size: 18px; }
+
+/* ===== 大额支出 ===== */
+.top-list { list-style: none; display: flex; flex-direction: column; gap: var(--sp-sm); }
+.top-item { display: flex; align-items: center; gap: var(--sp-md); padding: var(--sp-sm) 0; }
+.top-icon { flex: none; width: 32px; height: 32px; border-radius: var(--r-pill);
+  display: flex; align-items: center; justify-content: center; background: var(--canvas-soft); }
+.top-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.top-name { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.top-meta { font-size: 12px; color: var(--mute); }
+.top-amt { flex: none; font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
 
 /* ===== 明细筛选 ===== */
 .filter-bar { display: flex; align-items: center; gap: var(--sp-sm); margin-bottom: var(--sp-md); flex-wrap: wrap; }
@@ -159,7 +210,20 @@ tr.hl { background: #fffaf0; }
 
 /* ===== 窄屏适配 ===== */
 @media (max-width: 420px) {
-  .kpi-value { font-size: 18px; }
+  .kpi-row { gap: var(--sp-sm); }
+  .kpi-card { padding: var(--sp-md); }
+  .kpi-value { font-size: 17px; }
+  .kpi-delta, .kpi-sub { font-size: 10px; }
   main { padding: var(--sp-md); }
   .card { padding: var(--sp-lg); }
+  .pie-center-value { font-size: 18px; }
+}
+
+/* ===== 无障碍：尊重"减少动态效果" ===== */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    transition-duration: .001ms !important;
+  }
+  .cat-bar-fill { transition: none; }
 }

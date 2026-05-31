@@ -34,3 +34,17 @@ test('时间范围过滤', () => {
   const s = summarize(txns, { start:'2026-05-02', end:'2026-05-02' });
   assert.strictEqual(s.totalExpense, 30);
 });
+
+test('topExpenses 按金额降序取大额支出（不含中性/废单）', () => {
+  const s = summarize(txns, { start:'2026-05-01', end:'2026-05-31' });
+  assert.strictEqual(s.topExpenses[0].amount, 30);
+  assert.strictEqual(s.topExpenses[1].amount, 20);
+  assert.strictEqual(s.topExpenses[2].amount, 5);
+  // 废单(99,交易关闭)与中性(500)都不应出现
+  assert.ok(!s.topExpenses.some(t => t.amount === 99 || t.amount === 500));
+});
+
+test('count 统计计入消费的笔数', () => {
+  const s = summarize(txns, { start:'2026-05-01', end:'2026-05-31' });
+  assert.strictEqual(s.count, 3);
+});

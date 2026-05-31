@@ -43,24 +43,42 @@
         <div class="kpi-card kpi-expense">
           <span class="kpi-label">支出</span>
           <span class="kpi-value" id="sumExpense">¥0.00</span>
+          <span class="kpi-delta" id="expenseDelta"></span>
         </div>
         <div class="kpi-card kpi-income">
           <span class="kpi-label">收入</span>
           <span class="kpi-value" id="sumIncome">¥0.00</span>
+          <span class="kpi-delta" id="incomeDelta"></span>
         </div>
         <div class="kpi-card kpi-net">
           <span class="kpi-label">结余</span>
           <span class="kpi-value" id="sumNet">¥0.00</span>
+          <span class="kpi-sub" id="netSub"></span>
         </div>
       </div>
 
       <div class="card">
-        <h2 class="card-title">钱花在哪</h2>
-        <div class="chart-wrap"><canvas id="pieChart"></canvas></div>
+        <div class="card-head">
+          <h2 class="card-title">钱花在哪</h2>
+          <span class="card-meta" id="expenseCount"></span>
+        </div>
+        <div class="pie-wrap">
+          <div class="chart-wrap chart-pie"><canvas id="pieChart"></canvas></div>
+          <div class="pie-center" id="pieCenter" hidden>
+            <span class="pie-center-label">总支出</span>
+            <span class="pie-center-value" id="pieCenterValue">¥0</span>
+          </div>
+        </div>
         <p class="empty-hint" id="pieEmpty" hidden>还没有数据，先去「导入」页加载账单吧</p>
+        <ul class="cat-list" id="catList"></ul>
       </div>
 
-      <div class="card">
+      <div class="card" id="topCard" hidden>
+        <h2 class="card-title">大额支出</h2>
+        <ul class="top-list" id="topList"></ul>
+      </div>
+
+      <div class="card" id="trendCard" hidden>
         <h2 class="card-title">每日支出</h2>
         <div class="chart-wrap"><canvas id="trendChart"></canvas></div>
       </div>

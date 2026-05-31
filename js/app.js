@@ -4,8 +4,9 @@ import { readWechatFile, parseWechatRows } from './parse-wechat.js';
 import { normalizeAlipay, normalizeWechat } from './normalize.js';
 import { mergeTransactions } from './dedup.js';
 import { classify, CATEGORIES } from './classify.js';
-import { summarize } from './aggregate.js';
-import { renderCategoryPie, renderTrend } from './charts.js';
+import { summarize, prevMonthRange } from './aggregate.js';
+import { renderCategoryPie, renderTrend, colorForCategory } from './charts.js';
+import { iconSvg } from './icons.js';
 import {
   saveTransactions, loadAllTransactions, saveMemory, loadMemory,
   clearAllData, exportBackup, importBackup
@@ -135,17 +136,105 @@ function populateCategoryFilter() {
   document.getElementById(id).addEventListener('change', renderTable));
 
 // ===== 仪表盘 =====
+function fmtMoney(n) {
+  return '¥' + n.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+// 环比变化文字（本期 vs 上期），返回 {text, cls}
+function deltaInfo(cur, prev) {
+  if (prev == null || range.label === '全部') return { text: '', cls: '' };
+  if (prev === 0) return cur > 0 ? { text: '较上月新增', cls: 'up' } : { text: '', cls: '' };
+  const pct = (cur - prev) / prev * 100;
+  const arrow = pct > 0 ? '↑' : pct < 0 ? '↓' : '';
+  const cls = pct > 0 ? 'up' : pct < 0 ? 'down' : '';
+  return { text: `较上月 ${arrow}${Math.abs(pct).toFixed(0)}%`, cls };
+}
+
+function drillToCategory(cat) {
+  document.getElementById('filterSource').value = '';
+  document.getElementById('onlyUncat').checked = false;
+  document.getElementById('filterCategory').value = cat;
+  renderTable();
+  switchView('detail');
+}
+
+function renderCatList(byCategory, total) {
+  const ul = document.getElementById('catList');
+  const entries = Object.entries(byCategory).sort((a, b) => b[1] - a[1]);
+  ul.innerHTML = entries.map(([cat, amt]) => {
+    const pct = total > 0 ? (amt / total * 100) : 0;
+    const color = colorForCategory(cat);
+    return `<li class="cat-item" data-cat="${esc(cat)}" tabindex="0" role="button"
+        aria-label="${esc(cat)} ${fmtMoney(amt)}，占比 ${pct.toFixed(1)}%，点击查看明细">
+      <span class="cat-icon" style="color:${color}">${iconSvg(cat, 18)}</span>
+      <span class="cat-info">
+        <span class="cat-row1">
+          <span class="cat-name">${esc(cat)}</span>
+          <span class="cat-amt">${fmtMoney(amt)}</span>
+        </span>
+        <span class="cat-bar"><span class="cat-bar-fill" style="width:${pct}%;background:${color}"></span></span>
+      </span>
+      <span class="cat-pct">${pct.toFixed(0)}%</span>
+      <span class="cat-arrow" aria-hidden="true">›</span>
+    </li>`;
+  }).join('');
+  ul.querySelectorAll('.cat-item').forEach(li => {
+    const go = () => drillToCategory(li.dataset.cat);
+    li.addEventListener('click', go);
+    li.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
+  });
+}
+
+function renderTopList(topExpenses) {
+  const card = document.getElementById('topCard');
+  const ul = document.getElementById('topList');
+  if (!topExpenses.length) { card.hidden = true; return; }
+  card.hidden = false;
+  ul.innerHTML = topExpenses.map(t => {
+    const color = colorForCategory(t.myCategory);
+    return `<li class="top-item">
+      <span class="top-icon" style="color:${color}">${iconSvg(t.myCategory, 16)}</span>
+      <span class="top-main">
+        <span class="top-name">${esc(t.counterparty || t.description || '—')}</span>
+        <span class="top-meta">${esc(t.datetime.slice(5, 10))} · ${esc(t.myCategory)} · ${esc(t.source)}</span>
+      </span>
+      <span class="top-amt">${fmtMoney(t.amount)}</span>
+    </li>`;
+  }).join('');
+}
+
 function refreshDashboard() {
   const s = summarize(transactions, range);
-  document.getElementById('sumExpense').textContent = '¥' + s.totalExpense.toFixed(2);
-  document.getElementById('sumIncome').textContent = '¥' + s.totalIncome.toFixed(2);
-  document.getElementById('sumNet').textContent = '¥' + s.net.toFixed(2);
+  const prev = summarize(transactions, prevMonthRange(range));
+
+  document.getElementById('sumExpense').textContent = fmtMoney(s.totalExpense);
+  document.getElementById('sumIncome').textContent = fmtMoney(s.totalIncome);
+  document.getElementById('sumNet').textContent = fmtMoney(s.net);
   document.getElementById('rangeLabel').textContent = range.label === '全部' ? '全部时间' : range.label;
+  document.getElementById('expenseCount').textContent = s.count ? `${s.count} 笔` : '';
+
+  const ed = deltaInfo(s.totalExpense, prev ? prev.totalExpense : null);
+  const idd = deltaInfo(s.totalIncome, prev ? prev.totalIncome : null);
+  const eEl = document.getElementById('expenseDelta');
+  const iEl = document.getElementById('incomeDelta');
+  eEl.textContent = ed.text; eEl.className = 'kpi-delta ' + ed.cls;
+  iEl.textContent = idd.text; iEl.className = 'kpi-delta ' + idd.cls;
+  document.getElementById('netSub').textContent = s.net >= 0 ? '本期结余' : '本期超支';
+
   const hasData = Object.keys(s.byCategory).length > 0;
   document.getElementById('pieEmpty').hidden = hasData;
   document.getElementById('pieChart').style.display = hasData ? '' : 'none';
-  if (hasData) renderCategoryPie(document.getElementById('pieChart'), s.byCategory);
-  renderTrend(document.getElementById('trendChart'), s.byDay);
+  document.getElementById('pieCenter').hidden = !hasData;
+  if (hasData) {
+    document.getElementById('pieCenterValue').textContent = fmtMoney(s.totalExpense);
+    renderCategoryPie(document.getElementById('pieChart'), s.byCategory);
+  }
+  renderCatList(s.byCategory, s.totalExpense);
+  renderTopList(s.topExpenses);
+
+  const trendCard = document.getElementById('trendCard');
+  trendCard.hidden = !hasData;
+  if (hasData) renderTrend(document.getElementById('trendChart'), s.byDay);
 }
 
 document.getElementById('monthPick').addEventListener('change', e => {
