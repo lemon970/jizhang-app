@@ -1,21 +1,21 @@
 // 图表配色：按分类名固定映射（同一分类颜色恒定）
-// 暖莫兰迪色系：低饱和、暖调，呼应陶土点缀与暖白底（编辑风 B）
+// The Ledger 刊物大地色系：低饱和、暖调、似印刷油墨，落在暖纸底上协调
 const CATEGORY_COLOR_MAP = {
-  '餐饮': '#c47a5a',      // 暖陶土
-  '交通': '#8a9a8c',      // 暖鼠尾草
-  '购物': '#c9a07a',      // 沙驼
-  '学习教育': '#9a8c9e',  // 暖藕灰
-  '娱乐休闲': '#d0a96a',  // 金沙
-  '话费通讯': '#7e9690',  // 暖灰青
-  '生活缴费': '#a8a182',  // 橄榄卡其
-  '医疗健康': '#bd8a8a',  // 灰玫
-  '转账': '#a7a39c',      // 暖灰
-  '其他': '#cfc6b8',      // 浅暖灰
+  '餐饮': '#8a2a33',      // 酒红（首要分类，呼应点缀）
+  '交通': '#5a6b5a',      // 橄榄灰绿
+  '购物': '#b0763f',      // 赭石焦糖
+  '学习教育': '#4a5a6e',  // 黛蓝
+  '娱乐休闲': '#c39a4e',  // 芥末金
+  '话费通讯': '#6e8a82',  // 桉叶灰青
+  '生活缴费': '#8a7a52',  // 卡其
+  '医疗健康': '#a85a55',  // 陶土玫
+  '转账': '#9a907c',      // 灰褐
+  '其他': '#c8bca6',      // 浅灰褐
 };
-const FALLBACK_COLOR = '#cfc6b8';
+const FALLBACK_COLOR = '#c8bca6';
 export const colorForCategory = (name) => CATEGORY_COLOR_MAP[name] || FALLBACK_COLOR;
 
-const INK = '#1a1a1a', MUTE = '#9b9b96', GRID = '#e8e8e2';
+const INK = '#1c1a15', MUTE = '#9a907c', GRID = '#ddd4c2';
 let pie, trend;
 
 export function renderCategoryPie(canvas, byCategory) {
@@ -28,7 +28,7 @@ export function renderCategoryPie(canvas, byCategory) {
     data: { labels, datasets: [{
       data,
       backgroundColor: colors,
-      borderColor: '#ffffff',
+      borderColor: '#fbf9f2',
       borderWidth: 2,
       hoverOffset: 6,
     }] },
@@ -60,8 +60,8 @@ export function renderTrend(canvas, byDay) {
     data: { labels: labels.map(d => d.slice(5)), datasets: [{
       label: '每日支出',
       data,
-      backgroundColor: '#2a2a28',
-      hoverBackgroundColor: '#c2603f',
+      backgroundColor: '#1c1a15',
+      hoverBackgroundColor: '#8a2a33',
       borderRadius: 6,
       maxBarThickness: 28,
     }] },

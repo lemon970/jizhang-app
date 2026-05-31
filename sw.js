@@ -1,12 +1,12 @@
-const CACHE = 'jizhang-v7';
+const CACHE = 'jizhang-v8';
 const ASSETS = [
   './', './index.html', './css/style.css',
   './js/app.js','./js/decode.js','./js/parse-alipay.js','./js/parse-wechat.js',
   './js/normalize.js','./js/dedup.js','./js/classify.js','./js/aggregate.js',
   './js/storage.js','./js/charts.js','./js/icons.js',
   './js/vendor/papaparse.min.js','./js/vendor/xlsx.full.min.js','./js/vendor/chart.umd.min.js',
-  './fonts/inter-latin-400-normal.woff2','./fonts/inter-latin-500-normal.woff2',
-  './fonts/inter-latin-600-normal.woff2','./fonts/inter-latin-700-normal.woff2',
+  './fonts/fraunces.woff2','./fonts/fraunces-italic.woff2',
+  './fonts/noto-serif-sc-400.woff2','./fonts/noto-serif-sc-700.woff2',
   './manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png'
 ];
 self.addEventListener('install', e =>
