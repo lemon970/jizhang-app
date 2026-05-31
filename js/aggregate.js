@@ -40,3 +40,26 @@ export function prevMonthRange(range) {
   const ym = `${py}-${String(pm).padStart(2, '0')}`;
   return { start: `${ym}-01`, end: `${ym}-31`, label: ym };
 }
+
+// 搜索匹配：跨"对方/商品/备注/分类/金额"字段做包含匹配。空查询全通过。
+export function matchesSearch(t, query) {
+  if (!query) return true;
+  const s = String(query).trim().toLowerCase();
+  if (!s) return true;
+  const fields = [t.counterparty, t.description, t.note, t.myCategory, String(t.amount)];
+  return fields.some(f => String(f ?? '').toLowerCase().includes(s));
+}
+
+// 按"交易对方"汇总，返回 [{counterparty, total, count, items}]，按金额降序。
+export function groupByCounterparty(transactions) {
+  const map = new Map();
+  for (const t of transactions) {
+    const key = t.counterparty || '（未填对方）';
+    if (!map.has(key)) map.set(key, { counterparty: key, total: 0, count: 0, items: [] });
+    const g = map.get(key);
+    g.total += t.amount; g.count += 1; g.items.push(t);
+  }
+  const groups = [...map.values()];
+  for (const g of groups) g.total = Math.round(g.total * 100) / 100;
+  return groups.sort((a, b) => b.total - a.total);
+}

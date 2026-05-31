@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
-const { summarize } = await import('../js/aggregate.js');
+const { summarize, prevMonthRange, matchesSearch, groupByCounterparty } = await import('../js/aggregate.js');
 
 const txns = [
   { datetime:'2026-05-01T10:00:00', amount:20, direction:'支出', status:'交易成功', myCategory:'餐饮' },
@@ -47,4 +47,29 @@ test('topExpenses 按金额降序取大额支出（不含中性/废单）', () =
 test('count 统计计入消费的笔数', () => {
   const s = summarize(txns, { start:'2026-05-01', end:'2026-05-31' });
   assert.strictEqual(s.count, 3);
+});
+
+test('matchesSearch 跨字段包含匹配，空查询全通过', () => {
+  const t = { counterparty:'美团', description:'午餐', note:'', myCategory:'餐饮', amount:21.92 };
+  assert.strictEqual(matchesSearch(t, ''), true);
+  assert.strictEqual(matchesSearch(t, '美团'), true);
+  assert.strictEqual(matchesSearch(t, '午餐'), true);
+  assert.strictEqual(matchesSearch(t, '餐饮'), true);
+  assert.strictEqual(matchesSearch(t, '21.9'), true);
+  assert.strictEqual(matchesSearch(t, '肯德基'), false);
+});
+
+test('groupByCounterparty 按对方汇总并按金额降序', () => {
+  const list = [
+    { counterparty:'美团', amount:20 },
+    { counterparty:'食堂', amount:5 },
+    { counterparty:'美团', amount:30 },
+  ];
+  const groups = groupByCounterparty(list);
+  assert.strictEqual(groups.length, 2);
+  assert.strictEqual(groups[0].counterparty, '美团');
+  assert.strictEqual(groups[0].total, 50);
+  assert.strictEqual(groups[0].count, 2);
+  assert.strictEqual(groups[1].counterparty, '食堂');
+  assert.strictEqual(groups[1].total, 5);
 });

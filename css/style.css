@@ -156,6 +156,18 @@ main { max-width: 760px; margin: 0 auto; padding: var(--sp-lg); }
 .top-amt { flex: none; font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
 
 /* ===== 明细筛选 ===== */
+.search-bar {
+  display: flex; align-items: center; gap: var(--sp-sm);
+  background: var(--canvas); border: 1px solid var(--canvas-soft);
+  border-radius: var(--r-md); padding: var(--sp-sm) var(--sp-md);
+  margin-bottom: var(--sp-md);
+}
+.search-bar:focus-within { border-color: var(--positive); }
+.search-icon { color: var(--mute); display: flex; flex: none; }
+.search-input {
+  flex: 1; border: none; outline: none; background: transparent;
+  font-family: inherit; font-size: 14px; color: var(--ink);
+}
 .filter-bar { display: flex; align-items: center; gap: var(--sp-sm); margin-bottom: var(--sp-md); flex-wrap: wrap; }
 .select-sm {
   border: 1px solid var(--ink); border-radius: var(--r-md);
@@ -167,6 +179,55 @@ main { max-width: 760px; margin: 0 auto; padding: var(--sp-lg); }
   background: var(--primary-pale); color: var(--positive-deep);
   padding: var(--sp-xs) var(--sp-md); border-radius: var(--r-pill);
 }
+
+/* ===== 列表/商户 视图切换 ===== */
+.seg-toggle { display: flex; background: var(--canvas-soft); border-radius: var(--r-md);
+  padding: 3px; margin-bottom: var(--sp-md); gap: 3px; }
+.seg { flex: 1; border: none; background: transparent; cursor: pointer;
+  font-family: inherit; font-size: 13px; font-weight: 600; color: var(--mute);
+  padding: var(--sp-sm); border-radius: var(--r-sm); transition: background .15s, color .15s; }
+.seg.active { background: var(--canvas); color: var(--ink); box-shadow: 0 1px 3px rgba(14,15,12,.08); }
+
+/* ===== 按商户汇总 ===== */
+.merchant-list { list-style: none; background: var(--canvas); border-radius: var(--r-xl);
+  overflow: hidden; box-shadow: 0 1px 2px rgba(14,15,12,.04), 0 4px 16px rgba(14,15,12,.05); }
+.mc-group { border-bottom: 1px solid var(--canvas-soft); }
+.mc-group:last-child { border-bottom: none; }
+.mc-head { width: 100%; display: flex; align-items: center; gap: var(--sp-md);
+  padding: var(--sp-md) var(--sp-lg); background: var(--canvas); border: none; cursor: pointer;
+  font-family: inherit; text-align: left; transition: background .15s; }
+.mc-head:hover { background: var(--canvas-soft); }
+.mc-head:focus-visible { outline: 2px solid var(--positive); outline-offset: -2px; }
+.mc-icon { flex: none; width: 32px; height: 32px; border-radius: var(--r-pill);
+  display: flex; align-items: center; justify-content: center; background: var(--canvas-soft); }
+.mc-name { flex: 1; min-width: 0; font-size: 14px; font-weight: 600; color: var(--ink);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mc-count { flex: none; font-size: 12px; color: var(--mute); }
+.mc-total { flex: none; font-size: 15px; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
+.mc-caret { flex: none; color: var(--mute); font-size: 12px; transition: transform .2s; }
+.mc-head.open .mc-caret { transform: rotate(180deg); }
+.mc-sub { list-style: none; background: var(--canvas-soft); }
+.mc-sub-item { display: flex; align-items: center; gap: var(--sp-md);
+  padding: var(--sp-sm) var(--sp-lg) var(--sp-sm) 60px; font-size: 13px; }
+.mc-sub-date { flex: none; color: var(--mute); font-variant-numeric: tabular-nums; }
+.mc-sub-desc { flex: 1; min-width: 0; color: var(--body); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mc-sub-amt { flex: none; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* ===== 收支日历 ===== */
+.cal-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 6px; }
+.cal-weekdays span { text-align: center; font-size: 11px; color: var(--mute); }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.cal-cell { aspect-ratio: 1; border-radius: var(--r-sm); display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 1px; position: relative; }
+.cal-empty { background: transparent; }
+.cal-day { font-size: 11px; color: var(--body); }
+.cal-amt { font-size: 9px; color: var(--ink); font-weight: 600; }
+.cal-l0 { background: var(--canvas-soft); }
+.cal-l1 { background: var(--primary-pale); }
+.cal-l2 { background: var(--primary-neutral, #c5edab); }
+.cal-l3 { background: var(--primary); }
+.cal-l4 { background: var(--positive); }
+.cal-l4 .cal-day, .cal-l4 .cal-amt { color: #fff; }
 
 /* ===== 表格 ===== */
 .table-scroll { background: var(--canvas); border-radius: var(--r-xl); overflow-x: auto; -webkit-overflow-scrolling: touch; }

@@ -4,7 +4,7 @@ import { readWechatFile, parseWechatRows } from './parse-wechat.js';
 import { normalizeAlipay, normalizeWechat } from './normalize.js';
 import { mergeTransactions } from './dedup.js';
 import { classify, CATEGORIES } from './classify.js';
-import { summarize, prevMonthRange } from './aggregate.js';
+import { summarize, prevMonthRange, matchesSearch, groupByCounterparty } from './aggregate.js';
 import { renderCategoryPie, renderTrend, colorForCategory } from './charts.js';
 import { iconSvg } from './icons.js';
 import {
@@ -76,39 +76,85 @@ async function onFiles(files) {
 }
 document.getElementById('fileInput').addEventListener('change', e => onFiles(e.target.files));
 
-// ===== 明细表格 =====
+// ===== 明细 =====
+let detailMode = 'list'; // 'list' | 'merchant'
+
 function filteredTransactions() {
   const src = document.getElementById('filterSource').value;
   const cat = document.getElementById('filterCategory').value;
   const onlyUncat = document.getElementById('onlyUncat').checked;
+  const query = document.getElementById('searchInput').value;
   return transactions.filter(t =>
     (!src || t.source === src) &&
     (!cat || t.myCategory === cat) &&
-    (!onlyUncat || t.myCategory === '其他'));
+    (!onlyUncat || t.myCategory === '其他') &&
+    matchesSearch(t, query));
 }
 
-function renderTable() {
-  const tbody = document.querySelector('#txnTable tbody');
-  const empty = document.getElementById('tableEmpty');
-  const rows = filteredTransactions()
-    .sort((a, b) => b.datetime.localeCompare(a.datetime));
+function renderDetail() {
+  const rows = filteredTransactions().sort((a, b) => b.datetime.localeCompare(a.datetime));
   document.getElementById('detailCount').textContent = `${rows.length} 条`;
-  empty.hidden = rows.length > 0;
-  tbody.innerHTML = rows.map(t => {
-    const opts = CATEGORIES.map(c =>
-      `<option value="${c}"${c === t.myCategory ? ' selected' : ''}>${c}</option>`).join('');
-    const hl = t.myCategory === '其他' ? ' class="hl"' : '';
-    return `<tr${hl}>
-      <td>${esc(t.datetime.replace('T', ' ').slice(5))}</td>
-      <td>${esc(t.source)}</td>
-      <td class="num">${t.amount.toFixed(2)}</td>
-      <td>${esc(t.counterparty)}</td>
-      <td>${esc(t.description)}</td>
-      <td><select class="cat-select" data-id="${esc(t.id)}">${opts}</select></td>
-    </tr>`;
-  }).join('');
+  document.getElementById('listView').hidden = detailMode !== 'list';
+  document.getElementById('merchantView').hidden = detailMode !== 'merchant';
+  if (detailMode === 'list') renderListView(rows);
+  else renderMerchantView(rows);
+}
+
+function rowHtml(t) {
+  const opts = CATEGORIES.map(c =>
+    `<option value="${c}"${c === t.myCategory ? ' selected' : ''}>${c}</option>`).join('');
+  const hl = t.myCategory === '其他' ? ' class="hl"' : '';
+  return `<tr${hl}>
+    <td>${esc(t.datetime.replace('T', ' ').slice(5))}</td>
+    <td>${esc(t.source)}</td>
+    <td class="num">${t.amount.toFixed(2)}</td>
+    <td>${esc(t.counterparty)}</td>
+    <td>${esc(t.description)}</td>
+    <td><select class="cat-select" data-id="${esc(t.id)}">${opts}</select></td>
+  </tr>`;
+}
+
+function renderListView(rows) {
+  const tbody = document.querySelector('#txnTable tbody');
+  document.getElementById('tableEmpty').hidden = rows.length > 0;
+  tbody.innerHTML = rows.map(rowHtml).join('');
   tbody.querySelectorAll('.cat-select').forEach(sel =>
     sel.addEventListener('change', onChangeCategory));
+}
+
+function renderMerchantView(rows) {
+  const ul = document.getElementById('merchantView');
+  const groups = groupByCounterparty(rows);
+  if (!groups.length) {
+    ul.innerHTML = '<li class="empty-hint">没有匹配的记录</li>';
+    return;
+  }
+  ul.innerHTML = groups.map((g, i) => {
+    const color = colorForCategory(g.items[0].myCategory);
+    const sub = g.items.slice().sort((a, b) => b.datetime.localeCompare(a.datetime))
+      .map(t => `<li class="mc-sub-item">
+        <span class="mc-sub-date">${esc(t.datetime.slice(5, 10))}</span>
+        <span class="mc-sub-desc">${esc(t.description || t.myCategory)}</span>
+        <span class="mc-sub-amt">${fmtMoney(t.amount)}</span>
+      </li>`).join('');
+    return `<li class="mc-group">
+      <button class="mc-head" data-idx="${i}" aria-expanded="false">
+        <span class="mc-icon" style="color:${color}">${iconSvg(g.items[0].myCategory, 16)}</span>
+        <span class="mc-name">${esc(g.counterparty)}</span>
+        <span class="mc-count">${g.count} 笔</span>
+        <span class="mc-total">${fmtMoney(g.total)}</span>
+        <span class="mc-caret" aria-hidden="true">▾</span>
+      </button>
+      <ul class="mc-sub" hidden>${sub}</ul>
+    </li>`;
+  }).join('');
+  ul.querySelectorAll('.mc-head').forEach(btn => btn.addEventListener('click', () => {
+    const sub = btn.nextElementSibling;
+    const open = !sub.hidden;
+    sub.hidden = open;
+    btn.setAttribute('aria-expanded', String(!open));
+    btn.classList.toggle('open', !open);
+  }));
 }
 
 async function onChangeCategory(e) {
@@ -133,7 +179,16 @@ function populateCategoryFilter() {
   sel.value = cur;
 }
 ['filterSource', 'filterCategory', 'onlyUncat'].forEach(id =>
-  document.getElementById(id).addEventListener('change', renderTable));
+  document.getElementById(id).addEventListener('change', renderDetail));
+document.getElementById('searchInput').addEventListener('input', renderDetail);
+document.getElementById('viewToggle').addEventListener('click', e => {
+  const btn = e.target.closest('.seg');
+  if (!btn) return;
+  detailMode = btn.dataset.mode;
+  document.querySelectorAll('#viewToggle .seg').forEach(b =>
+    b.classList.toggle('active', b === btn));
+  renderDetail();
+});
 
 // ===== 仪表盘 =====
 function fmtMoney(n) {
@@ -154,7 +209,12 @@ function drillToCategory(cat) {
   document.getElementById('filterSource').value = '';
   document.getElementById('onlyUncat').checked = false;
   document.getElementById('filterCategory').value = cat;
-  renderTable();
+  document.getElementById('searchInput').value = '';
+  // 下钻默认进入"按商户汇总"，直观看到该类钱给了谁
+  detailMode = 'merchant';
+  document.querySelectorAll('#viewToggle .seg').forEach(b =>
+    b.classList.toggle('active', b.dataset.mode === 'merchant'));
+  renderDetail();
   switchView('detail');
 }
 
@@ -203,6 +263,35 @@ function renderTopList(topExpenses) {
   }).join('');
 }
 
+function renderCalendar(byDay, monthLabel) {
+  const card = document.getElementById('calendarCard');
+  const grid = document.getElementById('calGrid');
+  // 仅在选中具体月份时显示日历（"全部"时无意义）
+  if (!/^\d{4}-\d{2}$/.test(monthLabel)) { card.hidden = true; return; }
+  card.hidden = false;
+  const [y, m] = monthLabel.split('-').map(Number);
+  const daysInMonth = new Date(y, m, 0).getDate();
+  // 该月1号是周几（把周日的0转成7，让周一为首列）
+  let firstDow = new Date(y, m - 1, 1).getDay();
+  firstDow = firstDow === 0 ? 7 : firstDow;
+  const max = Math.max(0, ...Object.values(byDay));
+  let cells = '';
+  for (let i = 1; i < firstDow; i++) cells += '<span class="cal-cell cal-empty"></span>';
+  for (let d = 1; d <= daysInMonth; d++) {
+    const key = `${monthLabel}-${String(d).padStart(2, '0')}`;
+    const amt = byDay[key] || 0;
+    // 颜色深浅：0=空白，>0 按占最大值比例分 4 档
+    let lvl = 0;
+    if (amt > 0 && max > 0) lvl = Math.min(4, Math.ceil(amt / max * 4));
+    const title = amt > 0 ? `${key} 支出 ${fmtMoney(amt)}` : `${key} 无支出`;
+    cells += `<span class="cal-cell cal-l${lvl}" title="${title}">
+      <span class="cal-day">${d}</span>
+      ${amt > 0 ? `<span class="cal-amt">${amt >= 100 ? Math.round(amt) : amt.toFixed(0)}</span>` : ''}
+    </span>`;
+  }
+  grid.innerHTML = cells;
+}
+
 function refreshDashboard() {
   const s = summarize(transactions, range);
   const prev = summarize(transactions, prevMonthRange(range));
@@ -232,6 +321,10 @@ function refreshDashboard() {
   renderCatList(s.byCategory, s.totalExpense);
   renderTopList(s.topExpenses);
 
+  // 收支日历（仅具体月份，且有数据时）
+  if (hasData) renderCalendar(s.byDay, range.label);
+  else document.getElementById('calendarCard').hidden = true;
+
   const trendCard = document.getElementById('trendCard');
   trendCard.hidden = !hasData;
   if (hasData) renderTrend(document.getElementById('trendChart'), s.byDay);
@@ -250,7 +343,7 @@ document.getElementById('allRange').addEventListener('click', () => {
 
 function refreshAll() {
   populateCategoryFilter();
-  renderTable();
+  renderDetail();
   refreshDashboard();
 }
 
