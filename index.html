@@ -2,15 +2,122 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#9fe870">
   <title>我的记账</title>
   <link rel="stylesheet" href="css/style.css">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <script src="js/vendor/papaparse.min.js"></script>
+  <script src="js/vendor/xlsx.full.min.js"></script>
+  <script src="js/vendor/chart.umd.min.js"></script>
 </head>
 <body>
-  <header><h1>我的记账</h1></header>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-dot"></span>
+      <span class="brand-name">我的记账</span>
+    </div>
+    <span class="brand-sub">支付宝 + 微信 · 本地合并</span>
+  </header>
+
+  <nav class="tabs" id="tabs">
+    <button class="tab active" data-view="overview">概览</button>
+    <button class="tab" data-view="detail">明细</button>
+    <button class="tab" data-view="import">导入</button>
+  </nav>
+
   <main id="app">
-    <p id="placeholder">正在加载…</p>
+    <!-- ============ 概览 ============ -->
+    <section class="view active" id="view-overview">
+      <div class="range-bar">
+        <label class="range-field">
+          <span>月份</span>
+          <input type="month" id="monthPick">
+        </label>
+        <button class="chip" id="allRange">全部</button>
+        <span class="range-label" id="rangeLabel"></span>
+      </div>
+
+      <div class="kpi-row">
+        <div class="kpi-card kpi-expense">
+          <span class="kpi-label">支出</span>
+          <span class="kpi-value" id="sumExpense">¥0.00</span>
+        </div>
+        <div class="kpi-card kpi-income">
+          <span class="kpi-label">收入</span>
+          <span class="kpi-value" id="sumIncome">¥0.00</span>
+        </div>
+        <div class="kpi-card kpi-net">
+          <span class="kpi-label">结余</span>
+          <span class="kpi-value" id="sumNet">¥0.00</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 class="card-title">钱花在哪</h2>
+        <div class="chart-wrap"><canvas id="pieChart"></canvas></div>
+        <p class="empty-hint" id="pieEmpty" hidden>还没有数据，先去「导入」页加载账单吧</p>
+      </div>
+
+      <div class="card">
+        <h2 class="card-title">每日支出</h2>
+        <div class="chart-wrap"><canvas id="trendChart"></canvas></div>
+      </div>
+    </section>
+
+    <!-- ============ 明细 ============ -->
+    <section class="view" id="view-detail">
+      <div class="filter-bar">
+        <select id="filterSource" class="select-sm">
+          <option value="">全部来源</option>
+          <option value="支付宝">支付宝</option>
+          <option value="微信">微信</option>
+        </select>
+        <select id="filterCategory" class="select-sm">
+          <option value="">全部分类</option>
+        </select>
+        <label class="check"><input type="checkbox" id="onlyUncat">只看未分类</label>
+        <span class="count-badge" id="detailCount">0 条</span>
+      </div>
+      <div class="table-scroll">
+        <table id="txnTable">
+          <thead><tr>
+            <th>时间</th><th>来源</th><th class="num">金额</th>
+            <th>对方</th><th>说明</th><th>分类</th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+        <p class="empty-hint" id="tableEmpty">还没有记录</p>
+      </div>
+    </section>
+
+    <!-- ============ 导入 ============ -->
+    <section class="view" id="view-import">
+      <div class="card">
+        <h2 class="card-title">导入账单</h2>
+        <p class="card-desc">选择支付宝导出的 <b>.csv</b> 或微信导出的 <b>.xlsx</b>，可一次多选。数据只在本机处理，不上传。</p>
+        <label class="file-drop" id="fileDrop">
+          <input type="file" id="fileInput" accept=".csv,.xlsx" multiple hidden>
+          <span class="file-drop-icon">＋</span>
+          <span class="file-drop-text">点击选择账单文件</span>
+        </label>
+        <p class="import-msg" id="importMsg"></p>
+      </div>
+
+      <div class="card">
+        <h2 class="card-title">数据备份</h2>
+        <p class="card-desc">导出为 JSON 存档，换设备或清缓存后可导入恢复。</p>
+        <div class="btn-row">
+          <button class="btn btn-primary" id="exportBtn">导出备份</button>
+          <label class="btn btn-secondary">导入备份
+            <input type="file" id="importBackup" accept=".json" hidden></label>
+          <button class="btn btn-danger" id="clearBtn">清空数据</button>
+        </div>
+      </div>
+    </section>
   </main>
+
   <script type="module" src="js/app.js"></script>
 </body>
 </html>
