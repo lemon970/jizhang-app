@@ -118,7 +118,7 @@ main { max-width: 760px; margin: 0 auto; padding: var(--sp-lg); }
 }
 
 /* ===== 表格 ===== */
-.table-scroll { background: var(--canvas); border-radius: var(--r-xl); overflow: hidden; }
+.table-scroll { background: var(--canvas); border-radius: var(--r-xl); overflow-x: auto; -webkit-overflow-scrolling: touch; }
 table { width: 100%; border-collapse: collapse; font-size: 13px; }
 th, td { padding: var(--sp-md) var(--sp-sm); text-align: left; white-space: nowrap; }
 thead th { background: var(--canvas-soft); color: var(--body); font-weight: 600; font-size: 12px; position: sticky; top: 0; }
