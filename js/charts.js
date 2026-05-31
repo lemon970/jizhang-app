@@ -1,16 +1,19 @@
-// 图表配色：以 Wise 品牌色为锚的分类调色板（饼图为分类数据，非品牌CTA语境）
-const CATEGORY_COLORS = [
-  '#9fe870', // 餐饮 - Wise 主绿
-  '#38c8ff', // 交通 - accent cyan
-  '#ffc091', // 购物 - accent orange
-  '#2ead4b', // 学习教育 - positive green
-  '#ffd11a', // 娱乐休闲 - warning yellow
-  '#163300', // 话费通讯 - ink deep forest
-  '#c5edab', // 生活缴费 - primary neutral
-  '#d03238', // 医疗健康 - negative red
-  '#868685', // 人情往来 - mute
-  '#cdffad', // 其他 - primary active
-];
+// 图表配色：按分类名固定映射（保证同一分类颜色恒定，不随数据顺序变化）
+// 以 Wise 品牌色为锚扩展（饼图为分类数据可视化，非品牌CTA语境）
+const CATEGORY_COLOR_MAP = {
+  '餐饮': '#9fe870',      // Wise 主绿
+  '交通': '#38c8ff',      // accent cyan
+  '购物': '#ffc091',      // accent orange
+  '学习教育': '#2ead4b',  // positive green
+  '娱乐休闲': '#ffd11a',  // warning yellow
+  '话费通讯': '#163300',  // ink deep forest
+  '生活缴费': '#c5edab',  // primary neutral
+  '医疗健康': '#d03238',  // negative red
+  '转账': '#868685',      // mute
+  '其他': '#cdffad',      // primary active
+};
+const FALLBACK_COLOR = '#b0b3b0';
+export const colorForCategory = (name) => CATEGORY_COLOR_MAP[name] || FALLBACK_COLOR;
 
 const INK = '#0e0f0c', MUTE = '#868685', GRID = '#e8ebe6';
 let pie, trend;
@@ -18,24 +21,22 @@ let pie, trend;
 export function renderCategoryPie(canvas, byCategory) {
   const labels = Object.keys(byCategory);
   const data = labels.map(k => byCategory[k]);
+  const colors = labels.map(colorForCategory);
   if (pie) pie.destroy();
   pie = new Chart(canvas, {
     type: 'doughnut',
     data: { labels, datasets: [{
       data,
-      backgroundColor: CATEGORY_COLORS,
+      backgroundColor: colors,
       borderColor: '#ffffff',
       borderWidth: 2,
       hoverOffset: 6,
     }] },
     options: {
-      cutout: '62%',
+      cutout: '64%',
+      animation: { duration: 500 },
       plugins: {
-        legend: {
-          position: 'right',
-          labels: { color: INK, font: { family: 'Inter, system-ui', size: 13 },
-            boxWidth: 12, boxHeight: 12, padding: 10, usePointStyle: true, pointStyle: 'circle' }
-        },
+        legend: { display: false },
         tooltip: {
           callbacks: {
             label: (c) => {

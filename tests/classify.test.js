@@ -28,7 +28,13 @@ test('都未命中 -> 其他', () => {
   assert.strictEqual(classify({ ...base, counterparty:'xyz', description:'zzz' }, {}), '其他');
 });
 
-test('CATEGORIES 含学生版分类', () => {
+test('转账与红包都归入"转账"类', () => {
+  assert.strictEqual(classify({ ...base, source:'微信', counterparty:'某人', description:'转账备注:微信转账' }, {}), '转账');
+  assert.strictEqual(classify({ ...base, source:'微信', counterparty:'某人', description:'微信红包' }, {}), '转账');
+});
+
+test('CATEGORIES 含学生版分类，且已无"人情往来"', () => {
   assert.ok(CATEGORIES.includes('学习教育'));
-  assert.ok(CATEGORIES.includes('人情往来'));
+  assert.ok(CATEGORIES.includes('转账'));
+  assert.ok(!CATEGORIES.includes('人情往来'));
 });
