@@ -58,6 +58,22 @@
         </div>
       </div>
 
+      <div class="card">
+        <div class="card-head">
+          <h2 class="card-title">钱花在哪</h2>
+          <span class="card-meta" id="expenseCount"></span>
+        </div>
+        <div class="pie-wrap">
+          <div class="chart-wrap chart-pie"><canvas id="pieChart"></canvas></div>
+          <div class="pie-center" id="pieCenter" hidden>
+            <span class="pie-center-label">总支出</span>
+            <span class="pie-center-value" id="pieCenterValue">¥0</span>
+          </div>
+        </div>
+        <p class="empty-hint" id="pieEmpty" hidden>还没有数据，先去「导入」页加载账单吧</p>
+        <ul class="cat-list" id="catList"></ul>
+      </div>
+
       <div class="card" id="periodCard">
         <div class="card-head">
           <h2 class="card-title">支出表</h2>
@@ -76,22 +92,6 @@
           </table>
           <p class="empty-hint" id="periodEmpty">还没有可统计的账单</p>
         </div>
-      </div>
-
-      <div class="card">
-        <div class="card-head">
-          <h2 class="card-title">钱花在哪</h2>
-          <span class="card-meta" id="expenseCount"></span>
-        </div>
-        <div class="pie-wrap">
-          <div class="chart-wrap chart-pie"><canvas id="pieChart"></canvas></div>
-          <div class="pie-center" id="pieCenter" hidden>
-            <span class="pie-center-label">总支出</span>
-            <span class="pie-center-value" id="pieCenterValue">¥0</span>
-          </div>
-        </div>
-        <p class="empty-hint" id="pieEmpty" hidden>还没有数据，先去「导入」页加载账单吧</p>
-        <ul class="cat-list" id="catList"></ul>
       </div>
 
       <div class="card" id="calendarCard" hidden>
