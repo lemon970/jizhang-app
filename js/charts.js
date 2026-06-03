@@ -33,6 +33,7 @@ export function renderCategoryPie(canvas, byCategory) {
       hoverOffset: 6,
     }] },
     options: {
+      maintainAspectRatio: false,
       cutout: '64%',
       animation: { duration: 500 },
       plugins: {
@@ -66,6 +67,7 @@ export function renderTrend(canvas, byDay) {
       maxBarThickness: 28,
     }] },
     options: {
+      maintainAspectRatio: false,
       plugins: {
         legend: { display: false },
         tooltip: { callbacks: { label: (c) => ` ¥${c.parsed.y.toFixed(2)}` } }

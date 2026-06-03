@@ -140,8 +140,9 @@ main{max-width:720px;margin:0 auto;padding:var(--sp-xl) var(--sp-xl) var(--sp-2x
 .chart-wrap{position:relative;height:250px}
 .empty-hint{font-family:var(--serif);font-style:italic;font-size:15px;color:var(--mute);text-align:center;padding:var(--sp-2xl) 0}
 
-.pie-wrap{position:relative}
-.chart-pie{height:228px}
+.pie-wrap{position:relative;width:min(100%,320px);aspect-ratio:1;margin:0 auto var(--sp-sm)}
+.chart-pie{width:100%;height:100%}
+.chart-pie canvas{width:100% !important;height:100% !important}
 .pie-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;gap:4px}
 .pie-center-label{font-family:var(--serif);font-size:9px;color:var(--mute);text-transform:uppercase;letter-spacing:.2em}
 .pie-center-value{font-family:var(--serif);font-size:26px;font-weight:380;color:var(--ink);letter-spacing:-.01em}
@@ -208,6 +209,17 @@ main{max-width:720px;margin:0 auto;padding:var(--sp-xl) var(--sp-xl) var(--sp-2x
 .seg.active{color:var(--ink)}
 .seg.active::after{transform:scaleX(1)}
 
+/* ===== 小型分段控件 ===== */
+.mini-toggle{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:var(--r-pill);padding:2px;background:var(--paper)}
+.mini-seg{border:none;background:transparent;color:var(--mute);cursor:pointer;border-radius:var(--r-pill);
+  padding:5px 10px;font-family:var(--serif);font-size:12px;font-style:italic;transition:background .15s,color .15s}
+.mini-seg.active{background:var(--ink);color:var(--paper)}
+.period-table-wrap{box-shadow:none}
+.period-table-wrap .empty-hint{padding:var(--sp-xl) 0}
+.expense{color:var(--accent)}
+.income{color:var(--positive)}
+.neutral{color:var(--mute)}
+
 /* ===== 按商户汇总 ===== */
 .merchant-list{list-style:none;background:var(--card);border-radius:var(--r-xl);overflow:hidden;border:1px solid var(--line);box-shadow:var(--shadow-sm)}
 .mc-group{border-bottom:1px solid var(--line)}
@@ -220,7 +232,11 @@ main{max-width:720px;margin:0 auto;padding:var(--sp-xl) var(--sp-xl) var(--sp-2x
 .mc-icon{flex:none;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:1px solid var(--line);background:var(--paper)}
 .mc-name{flex:1;min-width:0;font-family:var(--song);font-size:15px;font-weight:400;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mc-count{flex:none;font-family:var(--serif);font-size:12px;color:var(--mute)}
+.mc-flow-summary{flex:none;font-family:var(--serif);font-size:11px;color:var(--mute)}
 .mc-total{flex:none;font-family:var(--serif);font-size:16px;font-weight:500;color:var(--ink);letter-spacing:-.01em}
+.mc-total.expense,.mc-sub-amt.expense,.amount-cell.expense{color:var(--accent)}
+.mc-total.income,.mc-sub-amt.income,.amount-cell.income{color:var(--positive)}
+.mc-sub-amt.neutral,.amount-cell.neutral{color:var(--mute)}
 .mc-caret{flex:none;color:var(--mute);font-size:12px;transition:transform .2s}
 .mc-head.open .mc-caret{transform:rotate(180deg)}
 .mc-sub{list-style:none;background:var(--paper)}
@@ -252,9 +268,16 @@ thead th{color:var(--mute);font-size:9px;position:sticky;top:0;background:var(--
 tbody tr{border-top:1px solid var(--line)}
 td{font-family:var(--song)}
 td.num,th.num{text-align:right;font-family:var(--serif);font-weight:500;letter-spacing:-.01em}
-td:nth-child(5){white-space:normal;max-width:160px;color:var(--ink2)}
+td:nth-child(6){white-space:normal;max-width:160px;color:var(--ink2)}
 tr.hl{background:var(--accent-weak)}
 .cat-select{border:1px solid var(--line);border-radius:var(--r-sm);padding:4px 6px;font-size:12px;font-family:var(--song);background:var(--card);color:var(--ink)}
+.amount-cell{font-family:var(--serif)}
+.flow-badge{display:inline-flex;align-items:center;justify-content:center;min-width:36px;
+  border:1px solid var(--line);border-radius:var(--r-pill);padding:2px 7px;
+  font-family:var(--serif);font-size:11px;font-style:italic;background:var(--paper);white-space:nowrap}
+.flow-badge.expense{border-color:rgba(138,42,51,.35);background:#f2e5df}
+.flow-badge.income{border-color:rgba(63,94,58,.35);background:#e6ecdf}
+.flow-badge.neutral{background:var(--paper2)}
 
 /* ===== 导入区 ===== */
 .file-drop{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:var(--sp-sm);
@@ -288,6 +311,10 @@ tr.hl{background:var(--accent-weak)}
   .card{padding:var(--sp-lg)}
   .kpi-value{font-size:21px}
   .pie-center-value{font-size:23px}
+  .pie-wrap{width:min(100%,288px)}
+  .mc-flow-summary{display:none}
+  #txnTable{min-width:640px}
+  #periodTable{min-width:520px}
 }
 
 /* ===== 无障碍 ===== */

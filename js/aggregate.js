@@ -55,11 +55,69 @@ export function groupByCounterparty(transactions) {
   const map = new Map();
   for (const t of transactions) {
     const key = t.counterparty || '（未填对方）';
-    if (!map.has(key)) map.set(key, { counterparty: key, total: 0, count: 0, items: [] });
+    if (!map.has(key)) map.set(key, {
+      counterparty: key,
+      total: 0,
+      expense: 0,
+      income: 0,
+      net: 0,
+      count: 0,
+      expenseCount: 0,
+      incomeCount: 0,
+      neutralCount: 0,
+      items: []
+    });
     const g = map.get(key);
-    g.total += t.amount; g.count += 1; g.items.push(t);
+    if (isCountableExpense(t)) {
+      g.expense += t.amount;
+      g.expenseCount += 1;
+    } else if (t.direction === '收入') {
+      g.income += t.amount;
+      g.incomeCount += 1;
+    } else {
+      g.neutralCount += 1;
+    }
+    g.count += 1; g.items.push(t);
   }
   const groups = [...map.values()];
-  for (const g of groups) g.total = Math.round(g.total * 100) / 100;
-  return groups.sort((a, b) => b.total - a.total);
+  for (const g of groups) {
+    g.expense = Math.round(g.expense * 100) / 100;
+    g.income = Math.round(g.income * 100) / 100;
+    g.net = Math.round((g.income - g.expense) * 100) / 100;
+    g.total = g.expense;
+  }
+  return groups.sort((a, b) => b.expense - a.expense || b.income - a.income);
+}
+
+export function buildPeriodTable(transactions, mode = 'month') {
+  const len = mode === 'year' ? 4 : 7;
+  const map = new Map();
+  for (const t of transactions) {
+    const period = String(t.datetime || '').slice(0, len);
+    if (!period) continue;
+    if (!map.has(period)) map.set(period, {
+      period,
+      expense: 0,
+      income: 0,
+      net: 0,
+      expenseCount: 0,
+      incomeCount: 0,
+      count: 0
+    });
+    const row = map.get(period);
+    if (isCountableExpense(t)) {
+      row.expense += t.amount;
+      row.expenseCount += 1;
+    } else if (t.direction === '收入') {
+      row.income += t.amount;
+      row.incomeCount += 1;
+    }
+    row.count += 1;
+  }
+  return [...map.values()].map(row => ({
+    ...row,
+    expense: Math.round(row.expense * 100) / 100,
+    income: Math.round(row.income * 100) / 100,
+    net: Math.round((row.income - row.expense) * 100) / 100
+  })).sort((a, b) => b.period.localeCompare(a.period));
 }

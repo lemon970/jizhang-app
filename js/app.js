@@ -4,7 +4,13 @@ import { readWechatFile, parseWechatRows } from './parse-wechat.js';
 import { normalizeAlipay, normalizeWechat } from './normalize.js';
 import { mergeTransactions } from './dedup.js';
 import { classify, resolveCategory, CATEGORIES } from './classify.js';
-import { summarize, prevMonthRange, matchesSearch, groupByCounterparty } from './aggregate.js';
+import {
+  summarize,
+  prevMonthRange,
+  matchesSearch,
+  groupByCounterparty,
+  buildPeriodTable
+} from './aggregate.js';
 import { renderCategoryPie, renderTrend, colorForCategory } from './charts.js';
 import { iconSvg } from './icons.js';
 import {
@@ -16,6 +22,7 @@ import {
 let transactions = [];
 let memory = {};
 let range = currentMonthRange();
+let periodMode = 'month';
 
 function currentMonthRange() {
   const now = new Date();
@@ -49,6 +56,7 @@ function switchView(name) {
     b.classList.toggle('active', b.dataset.view === name));
   document.querySelectorAll('.view').forEach(v =>
     v.classList.toggle('active', v.id === `view-${name}`));
+  if (name === 'detail') renderDetail();
 }
 document.getElementById('tabs').addEventListener('click', e => {
   if (e.target.classList.contains('tab')) switchView(e.target.dataset.view);
@@ -82,6 +90,7 @@ let detailMode = 'list'; // 'list' | 'merchant'
 function filteredTransactions() {
   const src = document.getElementById('filterSource').value;
   const cat = document.getElementById('filterCategory').value;
+  const dir = document.getElementById('filterDirection').value;
   const onlyUncat = document.getElementById('onlyUncat').checked;
   const query = document.getElementById('searchInput').value;
   // 跟随概览当前时间范围：从某月下钻进来时，只看该月（range 为"全部"时不限时间）
@@ -93,6 +102,7 @@ function filteredTransactions() {
     inRange(t) &&
     (!src || t.source === src) &&
     (!cat || t.myCategory === cat) &&
+    (!dir || t.direction === dir) &&
     (!onlyUncat || t.myCategory === '其他') &&
     matchesSearch(t, query));
 }
@@ -124,10 +134,12 @@ function rowHtml(t) {
   const opts = CATEGORIES.map(c =>
     `<option value="${c}"${c === t.myCategory ? ' selected' : ''}>${c}</option>`).join('');
   const hl = t.myCategory === '其他' ? ' class="hl"' : '';
+  const dirClass = directionClass(t);
   return `<tr${hl}>
     <td>${esc(t.datetime.replace('T', ' ').slice(5))}</td>
     <td>${esc(t.source)}</td>
-    <td class="num">${t.amount.toFixed(2)}</td>
+    <td><span class="flow-badge ${dirClass}">${esc(directionLabel(t.direction))}</span></td>
+    <td class="num amount-cell ${dirClass}">${fmtSignedMoney(t)}</td>
     <td>${esc(t.counterparty)}</td>
     <td>${esc(t.description)}</td>
     <td><select class="cat-select" data-id="${esc(t.id)}">${opts}</select></td>
@@ -154,15 +166,18 @@ function renderMerchantView(rows) {
     const sub = g.items.slice().sort((a, b) => b.datetime.localeCompare(a.datetime))
       .map(t => `<li class="mc-sub-item">
         <span class="mc-sub-date">${esc(t.datetime.slice(5, 10))}</span>
+        <span class="flow-badge ${directionClass(t)}">${esc(directionLabel(t.direction))}</span>
         <span class="mc-sub-desc">${esc(t.description || t.myCategory)}</span>
-        <span class="mc-sub-amt">${fmtMoney(t.amount)}</span>
+        <span class="mc-sub-amt ${directionClass(t)}">${fmtSignedMoney(t)}</span>
       </li>`).join('');
+    const summary = `支出 ${fmtMoney(g.expense)} · 收入 ${fmtMoney(g.income)}`;
     return `<li class="mc-group">
       <button class="mc-head" data-idx="${i}" aria-expanded="false">
         <span class="mc-icon" style="color:${color}">${iconSvg(g.items[0].myCategory, 16)}</span>
         <span class="mc-name">${esc(g.counterparty)}</span>
         <span class="mc-count">${g.count} 笔</span>
-        <span class="mc-total">${fmtMoney(g.total)}</span>
+        <span class="mc-flow-summary">${summary}</span>
+        <span class="mc-total ${g.net >= 0 ? 'income' : 'expense'}">${fmtMoney(g.net)}</span>
         <span class="mc-caret" aria-hidden="true">▾</span>
       </button>
       <ul class="mc-sub" hidden>${sub}</ul>
@@ -205,7 +220,7 @@ function populateCategoryFilter() {
     CATEGORIES.map(c => `<option value="${c}">${c}</option>`).join('');
   sel.value = cur;
 }
-['filterSource', 'filterCategory', 'onlyUncat'].forEach(id =>
+['filterSource', 'filterCategory', 'filterDirection', 'onlyUncat'].forEach(id =>
   document.getElementById(id).addEventListener('change', renderDetail));
 document.getElementById('searchInput').addEventListener('input', renderDetail);
 document.getElementById('detailTimeChip').addEventListener('click', () => {
@@ -225,6 +240,23 @@ document.getElementById('viewToggle').addEventListener('click', e => {
 // ===== 仪表盘 =====
 function fmtMoney(n) {
   return '¥' + n.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function fmtSignedMoney(t) {
+  const sign = t.direction === '收入' ? '+' : t.direction === '支出' ? '-' : '';
+  return sign + fmtMoney(t.amount);
+}
+
+function directionLabel(direction) {
+  if (direction === '收入') return '入账';
+  if (direction === '支出') return '出账';
+  return '中性';
+}
+
+function directionClass(t) {
+  if (t.direction === '收入') return 'income';
+  if (t.direction === '支出') return 'expense';
+  return 'neutral';
 }
 
 // 环比变化文字（本期 vs 上期），返回 {text, cls}
@@ -324,6 +356,19 @@ function renderCalendar(byDay, monthLabel) {
   grid.innerHTML = cells;
 }
 
+function renderPeriodTable() {
+  const rows = buildPeriodTable(transactions, periodMode);
+  const tbody = document.querySelector('#periodTable tbody');
+  document.getElementById('periodEmpty').hidden = rows.length > 0;
+  tbody.innerHTML = rows.map(r => `<tr>
+    <td>${esc(r.period)}</td>
+    <td class="num expense">${fmtMoney(r.expense)}</td>
+    <td class="num income">${fmtMoney(r.income)}</td>
+    <td class="num ${r.net >= 0 ? 'income' : 'expense'}">${fmtMoney(r.net)}</td>
+    <td>${r.expenseCount} 出 / ${r.incomeCount} 入</td>
+  </tr>`).join('');
+}
+
 function refreshDashboard() {
   const s = summarize(transactions, range);
   const prev = summarize(transactions, prevMonthRange(range));
@@ -360,17 +405,26 @@ function refreshDashboard() {
   const trendCard = document.getElementById('trendCard');
   trendCard.hidden = !hasData;
   if (hasData) renderTrend(document.getElementById('trendChart'), s.byDay);
+  renderPeriodTable();
 }
 
 document.getElementById('monthPick').addEventListener('change', e => {
   const ym = e.target.value;
   if (!ym) return;
   range = { start: `${ym}-01`, end: `${ym}-31`, label: ym };
-  refreshDashboard();
+  refreshAll();
 });
 document.getElementById('allRange').addEventListener('click', () => {
   range = { start: null, end: null, label: '全部' };
-  refreshDashboard();
+  refreshAll();
+});
+document.getElementById('periodToggle').addEventListener('click', e => {
+  const btn = e.target.closest('.mini-seg');
+  if (!btn) return;
+  periodMode = btn.dataset.periodMode;
+  document.querySelectorAll('#periodToggle .mini-seg').forEach(b =>
+    b.classList.toggle('active', b === btn));
+  renderPeriodTable();
 });
 
 function refreshAll() {

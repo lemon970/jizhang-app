@@ -7,6 +7,7 @@
   <title>我的记账</title>
   <link rel="stylesheet" href="css/style.css">
   <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <script src="js/vendor/papaparse.min.js"></script>
   <script src="js/vendor/xlsx.full.min.js"></script>
@@ -54,6 +55,26 @@
           <span class="kpi-label">结余</span>
           <span class="kpi-value" id="sumNet">¥0.00</span>
           <span class="kpi-sub" id="netSub"></span>
+        </div>
+      </div>
+
+      <div class="card" id="periodCard">
+        <div class="card-head">
+          <h2 class="card-title">支出表</h2>
+          <div class="mini-toggle" id="periodToggle" role="tablist" aria-label="支出表周期">
+            <button class="mini-seg active" data-period-mode="month" role="tab">月度</button>
+            <button class="mini-seg" data-period-mode="year" role="tab">年度</button>
+          </div>
+        </div>
+        <div class="table-scroll period-table-wrap">
+          <table id="periodTable">
+            <thead><tr>
+              <th>期间</th><th class="num">支出</th><th class="num">收入</th>
+              <th class="num">结余</th><th>笔数</th>
+            </tr></thead>
+            <tbody></tbody>
+          </table>
+          <p class="empty-hint" id="periodEmpty">还没有可统计的账单</p>
         </div>
       </div>
 
@@ -112,6 +133,12 @@
         <select id="filterCategory" class="select-sm">
           <option value="">全部分类</option>
         </select>
+        <select id="filterDirection" class="select-sm">
+          <option value="">全部收支</option>
+          <option value="支出">只看出账</option>
+          <option value="收入">只看入账</option>
+          <option value="中性">只看中性</option>
+        </select>
         <label class="check"><input type="checkbox" id="onlyUncat">只看未分类</label>
         <span class="count-badge" id="detailCount">0 条</span>
       </div>
@@ -123,7 +150,7 @@
       <div class="table-scroll" id="listView">
         <table id="txnTable">
           <thead><tr>
-            <th>时间</th><th>来源</th><th class="num">金额</th>
+            <th>时间</th><th>来源</th><th>收支</th><th class="num">金额</th>
             <th>对方</th><th>说明</th><th>分类</th>
           </tr></thead>
           <tbody></tbody>

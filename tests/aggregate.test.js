@@ -1,6 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
-const { summarize, prevMonthRange, matchesSearch, groupByCounterparty } = await import('../js/aggregate.js');
+const {
+  summarize,
+  prevMonthRange,
+  matchesSearch,
+  groupByCounterparty,
+  buildPeriodTable
+} = await import('../js/aggregate.js');
 
 const txns = [
   { datetime:'2026-05-01T10:00:00', amount:20, direction:'支出', status:'交易成功', myCategory:'餐饮' },
@@ -61,15 +67,54 @@ test('matchesSearch 跨字段包含匹配，空查询全通过', () => {
 
 test('groupByCounterparty 按对方汇总并按金额降序', () => {
   const list = [
-    { counterparty:'美团', amount:20 },
-    { counterparty:'食堂', amount:5 },
-    { counterparty:'美团', amount:30 },
+    { counterparty:'美团', amount:20, direction:'支出', status:'交易成功' },
+    { counterparty:'食堂', amount:5, direction:'支出', status:'交易成功' },
+    { counterparty:'美团', amount:30, direction:'支出', status:'交易成功' },
+    { counterparty:'美团', amount:12, direction:'收入', status:'交易成功' },
   ];
   const groups = groupByCounterparty(list);
   assert.strictEqual(groups.length, 2);
   assert.strictEqual(groups[0].counterparty, '美团');
   assert.strictEqual(groups[0].total, 50);
-  assert.strictEqual(groups[0].count, 2);
+  assert.strictEqual(groups[0].expense, 50);
+  assert.strictEqual(groups[0].income, 12);
+  assert.strictEqual(groups[0].net, -38);
+  assert.strictEqual(groups[0].count, 3);
+  assert.strictEqual(groups[0].expenseCount, 2);
+  assert.strictEqual(groups[0].incomeCount, 1);
   assert.strictEqual(groups[1].counterparty, '食堂');
   assert.strictEqual(groups[1].total, 5);
+});
+
+test('buildPeriodTable 按月生成支出表并倒序排列', () => {
+  const list = [
+    { datetime:'2026-04-01T10:00:00', amount:30, direction:'支出', status:'交易成功' },
+    { datetime:'2026-04-02T10:00:00', amount:20, direction:'收入', status:'交易成功' },
+    { datetime:'2026-05-01T10:00:00', amount:50, direction:'支出', status:'交易成功' },
+    { datetime:'2026-05-02T10:00:00', amount:10, direction:'支出', status:'交易关闭' },
+    { datetime:'2026-05-03T10:00:00', amount:7, direction:'中性', status:'交易成功' },
+  ];
+  const rows = buildPeriodTable(list, 'month');
+  assert.deepStrictEqual(rows.map(r => r.period), ['2026-05', '2026-04']);
+  assert.strictEqual(rows[0].expense, 50);
+  assert.strictEqual(rows[0].income, 0);
+  assert.strictEqual(rows[0].net, -50);
+  assert.strictEqual(rows[0].expenseCount, 1);
+  assert.strictEqual(rows[1].expense, 30);
+  assert.strictEqual(rows[1].income, 20);
+  assert.strictEqual(rows[1].net, -10);
+});
+
+test('buildPeriodTable 按年生成支出表', () => {
+  const list = [
+    { datetime:'2025-12-31T10:00:00', amount:9, direction:'支出', status:'交易成功' },
+    { datetime:'2026-01-01T10:00:00', amount:30, direction:'支出', status:'交易成功' },
+    { datetime:'2026-02-01T10:00:00', amount:80, direction:'收入', status:'交易成功' },
+  ];
+  const rows = buildPeriodTable(list, 'year');
+  assert.deepStrictEqual(rows.map(r => r.period), ['2026', '2025']);
+  assert.strictEqual(rows[0].expense, 30);
+  assert.strictEqual(rows[0].income, 80);
+  assert.strictEqual(rows[0].net, 50);
+  assert.strictEqual(rows[1].expense, 9);
 });
